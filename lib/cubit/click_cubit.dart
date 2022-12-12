@@ -1,52 +1,39 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
+import 'package:pr3/themes/themes.dart';
+
+import '../main.dart';
 
 part 'click_state.dart';
 
-bool isDark = false;
+bool DarkTheme = false;
 
 class ClickCubit extends Cubit<ClickState> {
   ClickCubit() : super(ClickInitial());
 
-  int count = 0;
-  String theme = "";
+  int sum = newCount;
+  String themeName = "";
   void onClick(int i) {
-    if (isDark && i > 0) {
-      count += i + 1;
-    } else if (isDark && i < 0) {
-      count = count + (i - 1);
-    } else {
-      count += i;
-    }
-    if (count < 0) {
+    sum = (DarkTheme && i > 0)
+        ? sum += i + 1
+        : sum = (DarkTheme && i < 0) ? sum = sum + (i - 1) : sum += i;
+    if (sum < 0) {
       emit(ClickError("Счетчик не может быть меньше нуля"));
-      count = 0;
+      sum = 0;
       return;
     }
-    switch (isDark) {
-      case true:
-        theme = "Dark";
-        break;
-      case false:
-        theme = "Light";
-        break;
-      default:
-    }
-    emit(Click(count, theme));
+    themeName = (DarkTheme == true) ? "Black" : "White";
+    emit(Click(sum, themeName));
   }
 }
 
 class SwitchCubit extends Cubit<SwitchState> {
-  SwitchCubit() : super(SwitchState(isDarkThemeOff: true));
+  SwitchCubit() : super(SwitchState(darkOff: true));
 
-  void toggleSwitch(bool? value, bool doReload) {
+  void onSwitch(bool? value, bool doReload) {
     if (doReload) {
-      if (isDark) {
-        isDark = false;
-      } else {
-        isDark = true;
-      }
+      DarkTheme = (DarkTheme == true) ? false : true;
     } else {
       emit(state.copyWith());
       return;

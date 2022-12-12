@@ -12,24 +12,21 @@ class ClickError extends ClickState {
 }
 
 class Click extends ClickState {
-  int count;
-  String theme;
+  int sum;
+  String themeName;
 
-  Click(this.count, this.theme);
+  Click(this.sum, this.themeName);
 }
 
 class SwitchState {
-  bool isDarkThemeOff = false;
-  ThemeData theme = ThemeData(brightness: Brightness.dark);
-  SwitchState({required this.isDarkThemeOff}) {
-    if (isDarkThemeOff) {
-      theme = ThemeData(brightness: Brightness.light);
-    } else {
-      theme = ThemeData(brightness: Brightness.dark);
-    }
+  bool darkOff = false;
+  ThemeData theme = ThemeData();
+  ThemesChange themesChange = ThemesChange();
+  SwitchState({required this.darkOff}) {
+    theme = themesChange.change(darkOff);
   }
 
   SwitchState copyWith({bool? changeState}) {
-    return SwitchState(isDarkThemeOff: changeState ?? isDarkThemeOff);
+    return SwitchState(darkOff: changeState ?? darkOff);
   }
 }

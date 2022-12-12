@@ -1,12 +1,45 @@
+import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'cubit/click_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:toggle_switch/toggle_switch.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 List<String> text = [];
 int count = 0;
-String themeName = "Light";
+int newCount = 0;
 void main() {
   runApp(MyApp());
+}
+
+Future<String> get _localPath async {
+  final directory = await getApplicationDocumentsDirectory();
+
+  return directory.path;
+}
+
+Future<File> get _localFile async {
+  final path = await _localPath;
+  return File('$path/themeName.txt');
+}
+
+Future<File> writeTheme(String theme, String count) async {
+  final file = await _localFile;
+
+  // Write the file
+  return file.writeAsString('$theme$count');
+}
+
+Future<String> readTheme() async {
+  final file = await _localFile;
+
+  // Read the file
+  String contents = await file.readAsString();
+
+  return contents;
 }
 
 class MyApp extends StatelessWidget {
@@ -23,7 +56,7 @@ class MyApp extends StatelessWidget {
               theme: state.theme,
               home: BlocProvider(
                 create: (context) => ClickCubit(),
-                child: MyHomePage(),
+                child: const MyHomePage(),
               ));
         },
       ),
@@ -32,7 +65,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatelessWidget {
-  MyHomePage({super.key});
+  const MyHomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,8 +74,29 @@ class MyHomePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'Вы нажали на кнопку столько раз',
+            ElevatedButton(
+              onPressed: () async {
+                String theme = await readTheme();
+                if (theme.contains("Black")) {
+                  text.add("${theme.substring(5)} - ${theme.substring(0, 5)}");
+                  newCount = int.parse(theme.substring(5));
+                  context.read<ClickCubit>().onClick(0);
+                  context.read<SwitchCubit>().onSwitch(false, true);
+                } else if (theme.contains("White")) {
+                  text.add("${theme.substring(5)} - ${theme.substring(0, 5)}");
+                  count = int.parse(theme.substring(5));
+                  context.read<ClickCubit>().onClick(0);
+                  context.read<SwitchCubit>().onSwitch(true, true);
+                }
+              },
+              child: const Icon(Icons.save),
+            ),
+            const SizedBox(
+              width: 20,
+            ),
+            Text(
+              'Текущее число:',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             BlocBuilder<ClickCubit, ClickState>(
               builder: (context, state) {
@@ -53,53 +108,21 @@ class MyHomePage extends StatelessWidget {
                 }
                 if (state is Click) {
                   if (text.isNotEmpty) {
-                    if (count != state.count) {
-                      text.add(state.count.toString() + " - " + state.theme);
+                    if (count != state.sum) {
+                      text.add("${state.sum} - ${state.themeName}");
                     }
                   } else {
-                    text.add(state.count.toString() + " - " + state.theme);
+                    text.add("${state.sum} - ${state.themeName}");
                   }
-                  count = state.count;
-                  context.read<SwitchCubit>().toggleSwitch(null, false);
+                  count = state.sum;
+                  context.read<SwitchCubit>().onSwitch(null, false);
                   return Text(
-                    state.count.toString(),
+                    state.sum.toString(),
                     style: Theme.of(context).textTheme.headlineMedium,
                   );
                 }
                 return Container();
               },
-            ),
-            BlocBuilder<SwitchCubit, SwitchState>(
-              builder: (context, state) {
-                return Switch(
-                  value: state.isDarkThemeOff,
-                  onChanged: (newValue) {
-                    context.read<SwitchCubit>().toggleSwitch(newValue, true);
-                  },
-                );
-              },
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FloatingActionButton(
-                  onPressed: () {
-                    context.read<ClickCubit>().onClick(1);
-                  },
-                  tooltip: 'Increment',
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(
-                  width: 20,
-                ),
-                FloatingActionButton(
-                  onPressed: () {
-                    context.read<ClickCubit>().onClick(-1);
-                  },
-                  tooltip: 'Decrement',
-                  child: const Icon(Icons.remove),
-                ),
-              ],
             ),
             const SizedBox(
               width: 20,
@@ -107,6 +130,13 @@ class MyHomePage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                ElevatedButton(
+                  onPressed: () {
+                    context.read<ClickCubit>().onClick(1);
+                  },
+                  child: const Icon(Icons.add),
+                ),
+                SizedBox(width: 15),
                 Container(
                   width: 300,
                   height: 400,
@@ -127,9 +157,49 @@ class MyHomePage extends StatelessWidget {
                           },
                         );
                       }),
-                )
+                ),
+                const SizedBox(width: 15),
+                ElevatedButton(
+                  onPressed: () {
+                    context.read<ClickCubit>().onClick(-1);
+                  },
+                  child: const Icon(Icons.remove),
+                ),
               ],
-            )
+            ),
+            const SizedBox(height: 15),
+            BlocBuilder<SwitchCubit, SwitchState>(
+              builder: (context, state) {
+                return ToggleSwitch(
+                  cornerRadius: 20.0,
+                  initialLabelIndex: 1,
+                  totalSwitches: 2,
+                  labels: const ['Black', 'White'],
+                  activeBgColor: const [Color(0xFFf7cf01)],
+                  inactiveBgColor: Colors.black26,
+                  activeFgColor: Colors.black,
+                  onToggle: (index) {
+                    if (index == 0) {
+                      if (text.isNotEmpty) {
+                        writeTheme(
+                            "Black",
+                            text[text.length - 1].substring(
+                                0, text[text.length - 1].length - 8));
+                        context.read<SwitchCubit>().onSwitch(false, true);
+                      }
+                    } else {
+                      if (text.isNotEmpty) {
+                        writeTheme(
+                            "White",
+                            text[text.length - 1].substring(
+                                0, text[text.length - 1].length - 8));
+                        context.read<SwitchCubit>().onSwitch(true, true);
+                      }
+                    }
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),
